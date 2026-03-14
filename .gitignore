@@ -9,3 +9,4 @@ dist/
 # Claude / Superpowers
 .claude/
 CLAUDE.md
+docs/superpowers/
