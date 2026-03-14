@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "AI Platform",
+    "slug": "ai-platform-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "ai-platform",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#ffffff"
+      }
+    }
+  }
+}

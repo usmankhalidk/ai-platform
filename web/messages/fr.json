@@ -1,0 +1,26 @@
+{
+  "dashboard": {
+    "title": "Tableau de bord IA",
+    "subtitle": "Métriques système en direct et gestion des sessions"
+  },
+  "counters": {
+    "requests": "Requêtes effectuées",
+    "tokens": "Tokens utilisés",
+    "connections": "Connexions actives"
+  },
+  "session": {
+    "start": "Démarrer la session",
+    "end": "Terminer la session",
+    "cost": "Coût actuel",
+    "duration": "Durée",
+    "paymentId": "Identifiant d'intention de paiement",
+    "idle": "Aucune session active",
+    "processing": "Traitement du paiement..."
+  },
+  "language": {
+    "label": "Langue",
+    "en": "Anglais",
+    "ar": "Arabe",
+    "fr": "Français"
+  }
+}

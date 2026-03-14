@@ -1,0 +1,26 @@
+{
+  "dashboard": {
+    "title": "AI Platform Dashboard",
+    "subtitle": "Live system metrics and session management"
+  },
+  "counters": {
+    "requests": "Requests Made",
+    "tokens": "Tokens Used",
+    "connections": "Active Connections"
+  },
+  "session": {
+    "start": "Start Session",
+    "end": "End Session",
+    "cost": "Current Cost",
+    "duration": "Duration",
+    "paymentId": "Payment Intent ID",
+    "idle": "No active session",
+    "processing": "Processing payment..."
+  },
+  "language": {
+    "label": "Language",
+    "en": "English",
+    "ar": "Arabic",
+    "fr": "French"
+  }
+}

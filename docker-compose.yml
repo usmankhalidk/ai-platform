@@ -1,0 +1,73 @@
+services:
+  # ─────────────────────────────────────────────
+  # PostgreSQL database
+  # ─────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secret}
+      POSTGRES_DB: ${POSTGRES_DB:-aiplatform}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ─────────────────────────────────────────────
+  # Express API (backend)
+  # ─────────────────────────────────────────────
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      # Exposed externally so the browser can reach it directly at http://localhost:4000
+      - "4000:4000"
+    environment:
+      PORT: 4000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-secret}@db:5432/${POSTGRES_DB:-aiplatform}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+    networks:
+      - app-network
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ─────────────────────────────────────────────
+  # Next.js web app
+  # ─────────────────────────────────────────────
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      args:
+        # NEXT_PUBLIC_ vars are inlined at build time — must be passed as build args
+        NEXT_PUBLIC_API_URL: http://localhost:4000
+    ports:
+      - "3000:3000"
+    environment:
+      # Runtime env vars for server-side Next.js code
+      BACKEND_URL: http://api:4000
+      NODE_ENV: production
+    networks:
+      - app-network
+    depends_on:
+      api:
+        condition: service_healthy
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
