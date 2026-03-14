@@ -19,6 +19,11 @@
     "idle": "No active session",
     "processing": "Processing payment..."
   },
+  "status": {
+    "polling": "Polling every 10s",
+    "inMemory": "In-memory state",
+    "healthy": "Healthy"
+  },
   "language": {
     "label": "Language",
     "en": "English",

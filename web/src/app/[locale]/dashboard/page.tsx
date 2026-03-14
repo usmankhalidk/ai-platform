@@ -122,14 +122,14 @@ export default function DashboardPage() {
             {/* Status bar */}
             <div className="glass rounded-xl px-5 py-3 flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-4 text-[11px] font-mono text-zinc-500">
-                <span>Polling every <span className="text-zinc-400">10s</span></span>
+                <span className="text-zinc-400">{t('status.polling')}</span>
                 <span className="text-zinc-700">·</span>
-                <span>In-memory state</span>
+                <span>{t('status.inMemory')}</span>
               </div>
               {error ? (
                 <span className="text-[11px] font-mono text-red-400">⚠ {error}</span>
               ) : (
-                <span className="text-[11px] font-mono text-emerald-400">● Healthy</span>
+                <span className="text-[11px] font-mono text-emerald-400">● {t('status.healthy')}</span>
               )}
             </div>
           </div>
