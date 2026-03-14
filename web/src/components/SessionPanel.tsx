@@ -6,7 +6,8 @@ import { useTranslations } from 'next-intl';
 interface SessionState {
   active: boolean;
   startTime: number | null;
-  elapsed: number; // seconds
+  elapsed: number;          // seconds
+  finalCost: string | null; // dollar string of the actual charged amount (respects Stripe minimum)
   paymentIntentId: string | null;
   error: string | null;
   processing: boolean;
@@ -22,6 +23,7 @@ export function SessionPanel() {
     active: false,
     startTime: null,
     elapsed: 0,
+    finalCost: null,
     paymentIntentId: null,
     error: null,
     processing: false,
@@ -43,7 +45,7 @@ export function SessionPanel() {
   }, [session.active, session.startTime]);
 
   function handleStart() {
-    setSession({ active: true, startTime: Date.now(), elapsed: 0, paymentIntentId: null, error: null, processing: false });
+    setSession({ active: true, startTime: Date.now(), elapsed: 0, finalCost: null, paymentIntentId: null, error: null, processing: false });
   }
 
   async function handleEnd() {
@@ -51,6 +53,9 @@ export function SessionPanel() {
     const elapsed = session.elapsed;
     // Convert to cents: $0.02/s = 2 cents/s. Minimum 50 cents (Stripe requirement).
     const amountCents = Math.max(50, Math.ceil(elapsed * 2));
+    // Store the actual dollar amount that will be charged (respects Stripe minimum).
+    // This may differ from elapsed * 0.02 for very short sessions.
+    const chargedDollars = (amountCents / 100).toFixed(2);
     setSession((prev) => ({ ...prev, active: false, processing: true }));
 
     try {
@@ -64,7 +69,7 @@ export function SessionPanel() {
         throw new Error((data as { error?: string }).error ?? `HTTP ${res.status}`);
       }
       const data = await res.json() as { payment_intent_id: string };
-      setSession((prev) => ({ ...prev, processing: false, paymentIntentId: data.payment_intent_id }));
+      setSession((prev) => ({ ...prev, processing: false, paymentIntentId: data.payment_intent_id, finalCost: chargedDollars }));
     } catch (err) {
       setSession((prev) => ({ ...prev, processing: false, error: err instanceof Error ? err.message : 'Unknown error' }));
     }
@@ -145,7 +150,7 @@ export function SessionPanel() {
               {session.paymentIntentId}
             </p>
             <p className="font-mono text-xs text-zinc-500">
-              {t('total')}: <span className="text-emerald-400">${cost}</span>
+              {t('total')}: <span className="text-emerald-400">${session.finalCost ?? cost}</span>
             </p>
           </div>
         )}

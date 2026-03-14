@@ -5,9 +5,9 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  StatusBar,
   Platform,
 } from 'react-native';
+// StatusBar is managed centrally in App.tsx via expo-status-bar — not imported here
 import { Message } from '../types';
 
 const INITIAL_MESSAGES: Message[] = [
@@ -68,8 +68,6 @@ export default function ApproveRejectScreen(): React.JSX.Element {
 
   return (
     <View style={styles.root}>
-      <StatusBar barStyle="light-content" backgroundColor={C.bg} />
-
       {/* Header */}
       <View style={styles.header}>
         {/* Wordmark */}

@@ -23,8 +23,9 @@ ENV NODE_ENV=production
 # next build --standalone copies only the files needed to run the server
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/public ./public 2>/dev/null || true
+# messages/ is needed at runtime for next-intl dynamic imports
 COPY --from=builder /app/messages ./messages
+# Note: no public/ directory in this project — omitted intentionally
 
 EXPOSE 3000
 

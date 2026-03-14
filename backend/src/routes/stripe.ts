@@ -3,9 +3,16 @@ import Stripe from 'stripe';
 
 const router = Router();
 
+// Validate that the Stripe secret key is present before initializing the client.
+// Failing loudly at startup is better than a cryptic runtime error on first request.
+const stripeKey = process.env.STRIPE_SECRET_KEY;
+if (!stripeKey) {
+  throw new Error('STRIPE_SECRET_KEY environment variable is not set');
+}
+
 // Stripe client is initialized once per process using the secret key from env.
 // The apiVersion is pinned to avoid unexpected breaking changes from Stripe upgrades.
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+const stripe = new Stripe(stripeKey, {
   apiVersion: '2024-06-20',
 });
 
