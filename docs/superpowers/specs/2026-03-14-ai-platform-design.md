@@ -29,6 +29,7 @@ ai-platform/
 │   │   │   └── api/
 │   │   │       └── counters/     # GET /api/counters (Task 1)
 │   │   ├── components/           # CounterCard, SessionPanel, LanguageSwitcher
+│   │   ├── middleware.ts         # next-intl locale routing middleware
 │   │   └── i18n/                 # next-intl config + request handler
 │   ├── messages/                 # en.json, ar.json, fr.json
 │   └── Dockerfile
@@ -55,10 +56,11 @@ ai-platform/
 - Module-level in-memory state holds three counters: `requestsMade`, `tokensUsed`, `activeConnections`
 - Each request increments all counters by a random amount (requests: +1–5, tokens: +50–200, connections: ±1 bounded to 0–50)
 - Returns `{ requestsMade, tokensUsed, activeConnections }`
+- **Note:** In-memory state is intentionally ephemeral for this demo — a production implementation would use a shared store (Redis, PostgreSQL). Single-instance behavior is acceptable here.
 
 **Dashboard Page:** `web/src/app/[locale]/dashboard/page.tsx`
 
-- On mount and every 10 seconds via `setInterval` in `useEffect`, fetches `/api/counters`
+- On mount and every 10 seconds via `setInterval` in `useEffect`, fetches `/api/counters` (relative URL, same Next.js process — no cross-origin issues)
 - Three `CounterCard` components display the values with Tailwind styling
 - Cleanup: `clearInterval` on unmount
 
@@ -69,10 +71,11 @@ ai-platform/
 **File:** `mobile/src/screens/ApproveRejectScreen.tsx`
 
 - `useState` holds `pending: Message[]` and `handled: Message[]`
-- 4 hardcoded messages, each with `{ id, title, summary }`
+- 4 hardcoded messages, each with `{ id, title, summary }` — no network calls
 - **Approve:** removes from `pending`, appends to `handled`
 - **Reject:** removes from `pending` only (not added to `handled`)
-- UI: `FlatList` for pending messages; below it a "Handled" section renders handled items in greyed style with a checkmark
+- UI: `ScrollView` with pending messages listed first; a "Handled" section below renders handled items in greyed style with a checkmark indicator
+- When `pending` is empty, the pending section shows a "No pending messages" empty state
 - Works on iOS and Android via Expo managed workflow
 
 ---
@@ -81,18 +84,30 @@ ai-platform/
 
 **Services:**
 
-| Service | Build | Port | Depends On |
-|---------|-------|------|------------|
-| `db` | `postgres:16-alpine` | 5432 (internal) | — |
-| `api` | `backend/Dockerfile` | 4000 | `db` (healthcheck) |
-| `web` | `web/Dockerfile` | 3000 | `api` |
+| Service | Build | External Port | Internal Port | Depends On |
+|---------|-------|--------------|---------------|------------|
+| `db` | `postgres:16-alpine` | — | 5432 | — |
+| `api` | `backend/Dockerfile` | 4000 | 4000 | `db` (healthcheck) |
+| `web` | `web/Dockerfile` | 3000 | 3000 | `api` (healthcheck) |
 
 - All services on a shared `app-network` Docker bridge network
-- `api` connects to `db` via `DATABASE_URL=postgresql://...@db:5432/aiplatform`
-- `web` calls `api` via `NEXT_PUBLIC_API_URL=http://api:4000`
-- Both `web` and `backend` use multi-stage `node:20-alpine` Dockerfiles
-- Next.js built with `output: 'standalone'` for minimal image size
-- Single command: `docker compose up`
+- `db` exposes no external port (internal only for security)
+- `api` exposes port 4000 externally so the browser can reach it directly at `http://localhost:4000`
+- `web` exposes port 3000 externally
+
+**URL strategy (browser vs server):**
+- Browser-side fetches (SessionPanel → Express) use `NEXT_PUBLIC_API_URL=http://localhost:4000` — the publicly-exposed port that the host browser can reach
+- Server-side fetches within Next.js (if any) would use `BACKEND_URL=http://api:4000` — the Docker-internal service name
+- `/api/counters` is a Next.js API route (same process), so no cross-service URL is needed
+
+**Healthchecks:**
+- `db`: `pg_isready -U ${POSTGRES_USER}`
+- `api`: `curl -f http://localhost:4000/health` (Express exposes a `GET /health` route returning 200)
+- `web` depends on `api` being healthy before starting
+
+**Dockerfiles:** Multi-stage builds — `node:20-alpine` for both web and backend. Backend compiles TypeScript before running. Next.js uses `output: 'standalone'` for minimal image size.
+
+**Single command:** `docker compose up`
 
 ---
 
@@ -100,17 +115,26 @@ ai-platform/
 
 **Routing:** Next.js App Router locale segments — `/en/dashboard`, `/ar/dashboard`, `/fr/dashboard`
 
-**Locale persistence:** Language switcher writes to a `NEXT_LOCALE` cookie. `next-intl` middleware reads this cookie on each request to determine active locale.
+**Middleware:** `web/src/middleware.ts` uses `next-intl`'s `createMiddleware` with:
+- `locales: ['en', 'ar', 'fr']`
+- `defaultLocale: 'en'`
+- `localeDetection: true` (reads `NEXT_LOCALE` cookie first, then `Accept-Language` header)
 
-**RTL:** Root layout sets `<html lang={locale} dir={locale === 'ar' ? 'rtl' : 'ltr'}>`. Tailwind CSS handles RTL layout flipping via `dir` attribute natively (logical properties where needed).
+**Locale persistence:** Language switcher sets the `NEXT_LOCALE` cookie (e.g., `document.cookie = 'NEXT_LOCALE=ar; path=/'`). On next request, `next-intl` middleware reads this cookie and redirects to the matching locale segment. Cookie persists across refreshes.
 
-**Translation keys** (all visible UI text):
+**RTL:** Root layout (`web/src/app/[locale]/layout.tsx`) sets:
+```tsx
+<html lang={locale} dir={locale === 'ar' ? 'rtl' : 'ltr'}>
+```
+Tailwind handles RTL layout via the `dir` attribute. Logical CSS properties (`start`/`end` instead of `left`/`right`) are used where explicit directional control is needed.
+
+**Translation keys** (all visible UI text across `messages/en.json`, `messages/ar.json`, `messages/fr.json`):
 - `dashboard.title`, `dashboard.subtitle`
 - `counters.requests`, `counters.tokens`, `counters.connections`
 - `session.start`, `session.end`, `session.cost`, `session.duration`, `session.paymentId`
-- `language.label`
+- `language.label`, `language.switcher`
 
-**Supported locales:** `en` (English), `ar` (Arabic, RTL), `fr` (French)
+**Supported locales:** `en` (English, LTR), `ar` (Arabic, RTL), `fr` (French, LTR)
 
 ---
 
@@ -118,18 +142,21 @@ ai-platform/
 
 **Session Panel component:** `web/src/components/SessionPanel.tsx`
 
-- **Start Session:** records `startTime = Date.now()`, starts a `setInterval` (1s tick)
+- **Start Session:** records `startTime = Date.now()`, starts a `setInterval` (1s tick) updating displayed elapsed time and cost
 - **Live display:** `elapsed = (Date.now() - startTime) / 1000` seconds; `cost = elapsed * 0.02` displayed as `$X.XX`
-- **End Session:** clears interval, POSTs `{ amount: Math.ceil(elapsed * 2) }` (cents) to `http://[API_URL]/api/stripe/create-intent`
+- **End Session:** clears interval, POSTs to `${NEXT_PUBLIC_API_URL}/api/stripe/create-intent` with body `{ amount: Math.max(50, Math.ceil(elapsed * 2)) }` (cents — $0.02/s × elapsed = elapsed × 2 cents; minimum 50 cents to satisfy Stripe's minimum charge)
 - Displays returned `payment_intent_id` in a success banner
+- **Note:** This demo creates a PaymentIntent in test mode only — no Stripe.js payment confirmation flow is implemented. The PaymentIntent represents the charge intent; reviewers should understand this is a backend integration demo, not a full checkout flow.
 
 **Backend route:** `backend/src/routes/stripe.ts`
 
 - `POST /api/stripe/create-intent`
-- Body: `{ amount: number }` (cents)
-- Creates a Stripe `PaymentIntent` in test mode: `stripe.paymentIntents.create({ amount, currency: 'usd' })`
-- Returns `{ payment_intent_id: intent.id }`
-- Uses `STRIPE_SECRET_KEY` from environment (test key: `sk_test_...`)
+- Body: `{ amount: number }` (cents, minimum 50 to satisfy Stripe's minimum charge requirement)
+- Creates: `stripe.paymentIntents.create({ amount, currency: 'usd' })`
+- Returns: `{ payment_intent_id: intent.id }`
+- Uses `STRIPE_SECRET_KEY` from environment (must be a test key: `sk_test_...`)
+
+**Backend health route:** `GET /health` returns `{ status: 'ok' }` — used by Docker healthcheck.
 
 ---
 
@@ -142,24 +169,46 @@ POSTGRES_USER=admin
 POSTGRES_PASSWORD=secret
 POSTGRES_DB=aiplatform
 
-# Backend
+# Backend (used by Express service)
 DATABASE_URL=postgresql://admin:secret@db:5432/aiplatform
 STRIPE_SECRET_KEY=sk_test_xxxx
 PORT=4000
 
-# Web
-NEXT_PUBLIC_API_URL=http://api:4000
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_xxxx
+# Web (used by Next.js service)
+# NEXT_PUBLIC_ variables are inlined into the browser bundle at build time
+NEXT_PUBLIC_API_URL=http://localhost:4000
+
+# Internal server-side URL for Next.js to reach the Express service within Docker
+BACKEND_URL=http://api:4000
 ```
+
+> **Notes:**
+> - No Stripe publishable key is needed — the frontend never calls Stripe.js directly in this demo. The PaymentIntent is created entirely server-side.
+> - `DATABASE_URL` is included to demonstrate a complete Docker Compose stack with a live PostgreSQL connection. The backend connects to the database on startup (connection verification) even though no queries are made in Task 5. This keeps the infrastructure realistic.
+
+---
+
+## CORS Configuration
+
+Express backend allows browser requests from:
+```ts
+const allowedOrigins = [
+  'http://localhost:3000',  // browser hitting Next.js dev server or Docker-exposed port
+];
+cors({ origin: allowedOrigins })
+```
+> **Note:** CORS applies only to browser-initiated requests. Server-side Next.js (SSR) calls to Express do not send an `Origin` header, so no additional CORS entry is needed for Docker-internal traffic.
 
 ---
 
 ## Cross-Cutting Concerns
 
 - **TypeScript:** All web and backend code is TypeScript. Expo uses TypeScript via the default Expo template.
-- **CORS:** Express backend has `cors()` middleware allowing requests from `http://localhost:3000` and the Docker `web` service origin.
-- **Code quality:** Comments on non-obvious logic (counter randomization, RTL detection, Stripe amount conversion).
-- **Error handling:** API routes return appropriate HTTP status codes; frontend shows error states for failed fetches.
+- **Code quality:** Comments on non-obvious logic (counter randomization, RTL detection, Stripe amount conversion, cents math).
+- **Error handling:**
+  - API routes return appropriate HTTP status codes with JSON error bodies
+  - Frontend shows inline error messages for failed fetches (counters show last known value; session panel shows error on Stripe failure)
+  - Express uses try/catch around Stripe calls, returns 500 with message on failure
 
 ---
 
