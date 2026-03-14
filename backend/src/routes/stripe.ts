@@ -13,7 +13,7 @@ if (!stripeKey) {
 // Stripe client is initialized once per process using the secret key from env.
 // The apiVersion is pinned to avoid unexpected breaking changes from Stripe upgrades.
 const stripe = new Stripe(stripeKey, {
-  apiVersion: '2024-06-20',
+  apiVersion: '2024-04-10',
 });
 
 // POST /api/stripe/create-intent
