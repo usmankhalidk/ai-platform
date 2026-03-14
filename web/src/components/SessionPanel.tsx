@@ -39,30 +39,18 @@ export function SessionPanel() {
         }));
       }, 1000);
     }
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [session.active, session.startTime]);
 
   function handleStart() {
-    setSession({
-      active: true,
-      startTime: Date.now(),
-      elapsed: 0,
-      paymentIntentId: null,
-      error: null,
-      processing: false,
-    });
+    setSession({ active: true, startTime: Date.now(), elapsed: 0, paymentIntentId: null, error: null, processing: false });
   }
 
   async function handleEnd() {
     if (intervalRef.current) clearInterval(intervalRef.current);
-
     const elapsed = session.elapsed;
     // Convert to cents: $0.02/s = 2 cents/s. Minimum 50 cents (Stripe requirement).
     const amountCents = Math.max(50, Math.ceil(elapsed * 2));
-
     setSession((prev) => ({ ...prev, active: false, processing: true }));
 
     try {
@@ -71,90 +59,122 @@ export function SessionPanel() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount: amountCents }),
       });
-
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? `HTTP ${res.status}`);
+        throw new Error((data as { error?: string }).error ?? `HTTP ${res.status}`);
       }
-
       const data = await res.json() as { payment_intent_id: string };
-      setSession((prev) => ({
-        ...prev,
-        processing: false,
-        paymentIntentId: data.payment_intent_id,
-      }));
+      setSession((prev) => ({ ...prev, processing: false, paymentIntentId: data.payment_intent_id }));
     } catch (err) {
-      setSession((prev) => ({
-        ...prev,
-        processing: false,
-        error: err instanceof Error ? err.message : 'Unknown error',
-      }));
+      setSession((prev) => ({ ...prev, processing: false, error: err instanceof Error ? err.message : 'Unknown error' }));
     }
   }
 
   const cost = (session.elapsed * RATE_PER_SECOND).toFixed(2);
   const minutes = Math.floor(session.elapsed / 60);
   const seconds = Math.floor(session.elapsed % 60);
-  const durationDisplay = `${minutes}:${String(seconds).padStart(2, '0')}`;
+  const durationDisplay = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
   return (
-    <div className="bg-white rounded-2xl shadow-md p-6 space-y-4">
-      <h2 className="text-lg font-semibold text-gray-800">{t('title')}</h2>
+    <div className={`relative rounded-2xl overflow-hidden transition-all duration-500 ${session.active ? 'glass-accent' : 'glass'}`}>
+      {/* Top accent line */}
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/50 to-transparent" />
 
-      {/* Idle state */}
-      {!session.active && !session.processing && !session.paymentIntentId && !session.error && (
-        <p className="text-gray-400 text-sm">{t('idle')}</p>
-      )}
+      <div className="p-6 space-y-5">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-sans font-semibold uppercase tracking-[0.18em] text-zinc-400">
+            {t('title')}
+          </h2>
+          {session.active && (
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-60" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
+            </span>
+          )}
+        </div>
 
-      {/* Active session: timer and cost */}
-      {session.active && (
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm text-gray-600">
-            <span>{t('duration')}</span>
-            <span className="font-mono font-bold text-gray-900">{durationDisplay}</span>
+        {/* Idle state */}
+        {!session.active && !session.processing && !session.paymentIntentId && !session.error && (
+          <p className="text-sm text-zinc-600 font-mono">{t('idle')}</p>
+        )}
+
+        {/* Active session: big timer + cost */}
+        {session.active && (
+          <div className="space-y-3">
+            <div>
+              <p className="text-[10px] font-sans font-semibold uppercase tracking-[0.18em] text-zinc-600 mb-1">
+                {t('duration')}
+              </p>
+              <p className="font-mono text-5xl font-medium text-zinc-50 tabular-nums tracking-tight">
+                {durationDisplay}
+              </p>
+            </div>
+            <div className="separator pt-3">
+              <p className="text-[10px] font-sans font-semibold uppercase tracking-[0.18em] text-zinc-600 mb-1">
+                {t('cost')}
+              </p>
+              <p className="font-mono text-3xl font-medium text-emerald-400 tabular-nums">
+                ${cost}
+              </p>
+            </div>
           </div>
-          <div className="flex justify-between text-sm text-gray-600">
-            <span>{t('cost')}</span>
-            <span className="font-mono font-bold text-green-600">${cost}</span>
+        )}
+
+        {/* Processing */}
+        {session.processing && (
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-60" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
+            </span>
+            <p className="text-sm font-mono text-zinc-400">{t('processing')}</p>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Processing */}
-      {session.processing && (
-        <p className="text-blue-500 text-sm animate-pulse">{t('processing')}</p>
-      )}
+        {/* Success */}
+        {session.paymentIntentId && (
+          <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/[0.05] p-4 space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-emerald-400 text-sm">✓</span>
+              <p className="text-[10px] font-sans font-semibold uppercase tracking-[0.18em] text-emerald-400">
+                {t('paymentId')}
+              </p>
+            </div>
+            <p className="font-mono text-xs text-zinc-300 break-all leading-relaxed">
+              {session.paymentIntentId}
+            </p>
+            <p className="font-mono text-xs text-zinc-500">
+              {t('total')}: <span className="text-emerald-400">${cost}</span>
+            </p>
+          </div>
+        )}
 
-      {/* Success: show payment intent ID */}
-      {session.paymentIntentId && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-1">
-          <p className="text-xs font-medium text-green-700">{t('paymentId')}</p>
-          <p className="text-xs font-mono text-green-900 break-all">{session.paymentIntentId}</p>
-          <p className="text-xs text-green-600">{t('total')}: ${cost}</p>
-        </div>
-      )}
+        {/* Error */}
+        {session.error && (
+          <div className="rounded-xl border border-red-400/20 bg-red-400/[0.05] p-3">
+            <p className="font-mono text-xs text-red-400">{session.error}</p>
+          </div>
+        )}
 
-      {/* Error */}
-      {session.error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-          <p className="text-xs text-red-700">{session.error}</p>
-        </div>
-      )}
-
-      {/* Buttons */}
-      <div className="flex gap-2 pt-2">
+        {/* Action button */}
         {!session.active ? (
           <button
             onClick={handleStart}
             disabled={session.processing}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+            className="w-full py-3 px-4 rounded-xl font-sans text-sm font-semibold transition-all duration-200
+              bg-accent text-zinc-950 hover:shadow-[0_0_24px_rgba(34,211,238,0.35)] hover:scale-[1.02]
+              disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none
+              active:scale-[0.98]"
           >
             {t('start')}
           </button>
         ) : (
           <button
             onClick={handleEnd}
-            className="flex-1 bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+            className="w-full py-3 px-4 rounded-xl font-sans text-sm font-semibold transition-all duration-200
+              border border-red-400/40 text-red-400 hover:bg-red-400/10 hover:border-red-400/60
+              active:scale-[0.98]"
           >
             {t('end')}
           </button>

@@ -1,9 +1,25 @@
 import type { Metadata } from 'next';
+import { Syne, JetBrains_Mono } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { routing } from '@/i18n/routing';
 import '../globals.css';
+
+// Syne: geometric, characterful — used for all UI labels and headings
+const syne = Syne({
+  subsets: ['latin'],
+  variable: '--font-syne',
+  display: 'swap',
+});
+
+// JetBrains Mono: crisp monospace — used for all numbers, IDs, and data
+const jetbrains = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-jetbrains',
+  display: 'swap',
+  weight: ['300', '400', '500', '600'],
+});
 
 export const metadata: Metadata = {
   title: 'AI Platform',
@@ -16,7 +32,6 @@ interface LocaleLayoutProps {
 }
 
 export default async function LocaleLayout({ children, params: { locale } }: LocaleLayoutProps) {
-  // Reject unknown locales
   if (!(routing.locales as readonly string[]).includes(locale)) {
     notFound();
   }
@@ -24,7 +39,11 @@ export default async function LocaleLayout({ children, params: { locale } }: Loc
   const messages = await getMessages();
 
   return (
-    <html lang={locale} dir={locale === 'ar' ? 'rtl' : 'ltr'}>
+    <html
+      lang={locale}
+      dir={locale === 'ar' ? 'rtl' : 'ltr'}
+      className={`${syne.variable} ${jetbrains.variable}`}
+    >
       <body>
         <NextIntlClientProvider messages={messages}>
           {children}

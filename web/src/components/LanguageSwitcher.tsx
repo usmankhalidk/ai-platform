@@ -21,29 +21,30 @@ export function LanguageSwitcher({ currentLocale }: LanguageSwitcherProps) {
   const pathname = usePathname();
 
   function switchLocale(newLocale: LocaleCode) {
-    // Persist preference in a cookie so next-intl middleware remembers it
+    // Persist preference in cookie — next-intl middleware reads NEXT_LOCALE on the next request
     document.cookie = `NEXT_LOCALE=${newLocale}; path=/; max-age=31536000; SameSite=Lax`;
-
-    // Replace the locale segment in the current path
-    // pathname looks like /en/dashboard → replace /en with /ar
     const segments = pathname.split('/');
-    segments[1] = newLocale; // index 1 is the locale segment
+    segments[1] = newLocale;
     router.push(segments.join('/'));
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-sm text-gray-500">{t('label')}:</span>
-      <div className="flex gap-1">
+    <div className="flex items-center gap-3">
+      <span className="text-[10px] font-sans font-semibold uppercase tracking-[0.18em] text-zinc-600">
+        {t('label')}
+      </span>
+      <div className="glass flex rounded-xl p-1 gap-0.5">
         {locales.map(({ code, key }) => (
           <button
             key={code}
             onClick={() => switchLocale(code)}
-            className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-              currentLocale === code
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+            className={`
+              px-3 py-1.5 rounded-lg text-xs font-sans font-semibold transition-all duration-200
+              ${currentLocale === code
+                ? 'bg-accent text-zinc-950 shadow-[0_0_12px_rgba(34,211,238,0.4)]'
+                : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.06]'
+              }
+            `}
           >
             {t(key)}
           </button>

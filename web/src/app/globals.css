@@ -1,3 +1,53 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    --accent-rgb: 34, 211, 238;
+    --success-rgb: 52, 211, 153;
+  }
+
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-zinc-950 text-zinc-50;
+    /* Atmospheric radial glows — subtle depth without being distracting */
+    background-image:
+      radial-gradient(ellipse 70% 50% at 15% 5%,  rgba(34, 211, 238, 0.07) 0%, transparent 55%),
+      radial-gradient(ellipse 55% 65% at 85% 90%, rgba(52, 211, 153, 0.05) 0%, transparent 55%);
+    min-height: 100vh;
+  }
+
+  /* Refined scrollbar */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-zinc-700 rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-zinc-600; }
+}
+
+@layer utilities {
+  /* Primary surface: ultra-thin glass card */
+  .glass {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  /* Accent-bordered glass card (for highlighted state) */
+  .glass-accent {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(34, 211, 238, 0.25);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 0 24px rgba(34, 211, 238, 0.08), inset 0 1px 0 rgba(34, 211, 238, 0.15);
+  }
+}
