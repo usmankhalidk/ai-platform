@@ -6,6 +6,9 @@
     "orientation": "portrait",
     "scheme": "ai-platform",
     "userInterfaceStyle": "light",
+    "experiments": {
+      "autolinkingModuleResolution": true
+    },
     "ios": {
       "supportsTablet": false
     },
