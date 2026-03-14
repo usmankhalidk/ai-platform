@@ -3,8 +3,10 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Copy manifests first to leverage Docker layer caching
+# Using npm install instead of npm ci — no package-lock.json in Docker build context
+# (workspace lock file lives at the monorepo root, outside this service's build context)
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 # Copy all source files, then build
 # NEXT_PUBLIC_ vars must be available at build time so Next.js can inline them
