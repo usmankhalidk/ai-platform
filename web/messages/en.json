@@ -9,11 +9,13 @@
     "connections": "Active Connections"
   },
   "session": {
+    "title": "Session",
     "start": "Start Session",
     "end": "End Session",
     "cost": "Current Cost",
     "duration": "Duration",
     "paymentId": "Payment Intent ID",
+    "total": "Total",
     "idle": "No active session",
     "processing": "Processing payment..."
   },

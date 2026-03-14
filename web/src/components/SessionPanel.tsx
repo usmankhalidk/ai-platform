@@ -99,7 +99,7 @@ export function SessionPanel() {
 
   return (
     <div className="bg-white rounded-2xl shadow-md p-6 space-y-4">
-      <h2 className="text-lg font-semibold text-gray-800">Session</h2>
+      <h2 className="text-lg font-semibold text-gray-800">{t('title')}</h2>
 
       {/* Idle state */}
       {!session.active && !session.processing && !session.paymentIntentId && !session.error && (
@@ -130,7 +130,7 @@ export function SessionPanel() {
         <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-1">
           <p className="text-xs font-medium text-green-700">{t('paymentId')}</p>
           <p className="text-xs font-mono text-green-900 break-all">{session.paymentIntentId}</p>
-          <p className="text-xs text-green-600">Total: ${cost}</p>
+          <p className="text-xs text-green-600">{t('total')}: ${cost}</p>
         </div>
       )}
 
